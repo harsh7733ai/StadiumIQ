@@ -1,0 +1,148 @@
+"use client";
+
+import { motion } from "framer-motion";
+import type { Poi } from "@/lib/schemas/poi";
+import type { DensityMap } from "@/lib/data/crowd";
+import { CROWD_THRESHOLDS } from "@/lib/constants";
+
+// Hex values matching CLAUDE.md thresholds
+const DENSITY_COLORS = {
+  low: "#22c55e",      // green-500  ≤ 0.30
+  medium: "#eab308",   // yellow-500 ≤ 0.60
+  high: "#f97316",     // orange-500 ≤ 0.85
+  critical: "#ef4444", // red-500    > 0.85
+} as const;
+
+function colorForDensity(d: number): string {
+  if (d <= CROWD_THRESHOLDS.LOW) return DENSITY_COLORS.low;
+  if (d <= CROWD_THRESHOLDS.MEDIUM) return DENSITY_COLORS.medium;
+  if (d <= CROWD_THRESHOLDS.HIGH) return DENSITY_COLORS.high;
+  return DENSITY_COLORS.critical;
+}
+
+const POI_TYPE_RADIUS: Record<Poi["type"], number> = {
+  gate: 22,
+  food: 18,
+  restroom: 14,
+  merch: 16,
+  firstaid: 14,
+};
+
+interface Props {
+  pois: Poi[];
+  density: DensityMap;
+  onSelect?: (poiId: string) => void;
+}
+
+export function VenueHeatmap({ pois, density, onSelect }: Props) {
+  return (
+    <svg
+      viewBox="0 0 1000 600"
+      className="w-full h-full"
+      aria-label="Stadium venue map"
+    >
+      {/* ── Venue shell ──────────────────────────────────────────────── */}
+      <ellipse
+        cx={500}
+        cy={300}
+        rx={460}
+        ry={265}
+        fill="#1e293b"
+        stroke="#334155"
+        strokeWidth={3}
+      />
+      {/* Playing field */}
+      <ellipse
+        cx={500}
+        cy={300}
+        rx={310}
+        ry={175}
+        fill="#166534"
+        stroke="#15803d"
+        strokeWidth={2}
+        opacity={0.9}
+      />
+      {/* Centre circle */}
+      <circle
+        cx={500}
+        cy={300}
+        r={55}
+        fill="none"
+        stroke="#15803d"
+        strokeWidth={1.5}
+        opacity={0.6}
+      />
+      {/* Halfway line */}
+      <line
+        x1={500} y1={127} x2={500} y2={473}
+        stroke="#15803d"
+        strokeWidth={1.5}
+        opacity={0.6}
+      />
+
+      {/* ── Concourse ring ────────────────────────────────────────────── */}
+      <ellipse
+        cx={500}
+        cy={300}
+        rx={460}
+        ry={265}
+        fill="none"
+        stroke="#475569"
+        strokeWidth={1}
+        strokeDasharray="6 4"
+        opacity={0.4}
+      />
+
+      {/* ── POI markers ───────────────────────────────────────────────── */}
+      {pois.map((poi) => {
+        const d = density[poi.id] ?? 0;
+        const fill = colorForDensity(d);
+        const r = POI_TYPE_RADIUS[poi.type];
+        const labelY = poi.coords.y + r + 14;
+
+        return (
+          <g
+            key={poi.id}
+            onClick={() => onSelect?.(poi.id)}
+            className="cursor-pointer"
+            role="button"
+            aria-label={`${poi.name}, ${Math.round(d * 100)}% density`}
+          >
+            {/* Glow ring — static, always present */}
+            <circle
+              cx={poi.coords.x}
+              cy={poi.coords.y}
+              r={r + 6}
+              fill={fill}
+              opacity={0.18}
+            />
+
+            {/* Animated fill circle */}
+            <motion.circle
+              cx={poi.coords.x}
+              cy={poi.coords.y}
+              r={r}
+              stroke="#0f172a"
+              strokeWidth={2}
+              animate={{ fill }}
+              transition={{ duration: 0.4, ease: "easeOut" }}
+            />
+
+            {/* POI name label */}
+            <text
+              x={poi.coords.x}
+              y={labelY}
+              textAnchor="middle"
+              fill="#e2e8f0"
+              fontSize={10}
+              fontFamily="var(--font-geist-sans, sans-serif)"
+              className="pointer-events-none select-none"
+            >
+              {poi.name}
+            </text>
+          </g>
+        );
+      })}
+    </svg>
+  );
+}

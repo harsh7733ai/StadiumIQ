@@ -1,0 +1,21 @@
+[
+  { "id": "gate-north", "name": "North Gate", "type": "gate", "coords": { "x": 500, "y": 30 }, "nodeId": "n-gate-north" },
+  { "id": "gate-south", "name": "South Gate", "type": "gate", "coords": { "x": 500, "y": 570 }, "nodeId": "n-gate-south" },
+
+  { "id": "food-burger", "name": "Burger Stand", "type": "food", "coords": { "x": 180, "y": 160 }, "nodeId": "n-food-burger" },
+  { "id": "food-veg", "name": "Veg Corner", "type": "food", "coords": { "x": 820, "y": 160 }, "nodeId": "n-food-veg" },
+  { "id": "food-beer", "name": "Beer Garden", "type": "food", "coords": { "x": 150, "y": 380 }, "nodeId": "n-food-beer" },
+  { "id": "food-coffee", "name": "Coffee Kiosk", "type": "food", "coords": { "x": 850, "y": 380 }, "nodeId": "n-food-coffee" },
+  { "id": "food-pizza", "name": "Pizza Slice", "type": "food", "coords": { "x": 300, "y": 520 }, "nodeId": "n-food-pizza" },
+  { "id": "food-dessert", "name": "Dessert Bar", "type": "food", "coords": { "x": 700, "y": 520 }, "nodeId": "n-food-dessert" },
+
+  { "id": "restroom-nw", "name": "Restroom NW", "type": "restroom", "coords": { "x": 200, "y": 80 }, "nodeId": "n-restroom-nw" },
+  { "id": "restroom-ne", "name": "Restroom NE", "type": "restroom", "coords": { "x": 800, "y": 80 }, "nodeId": "n-restroom-ne" },
+  { "id": "restroom-sw", "name": "Restroom SW", "type": "restroom", "coords": { "x": 200, "y": 520 }, "nodeId": "n-restroom-sw" },
+  { "id": "restroom-se", "name": "Restroom SE", "type": "restroom", "coords": { "x": 800, "y": 520 }, "nodeId": "n-restroom-se" },
+
+  { "id": "merch-east", "name": "Merch Store E", "type": "merch", "coords": { "x": 900, "y": 300 }, "nodeId": "n-merch-east" },
+  { "id": "merch-west", "name": "Merch Store W", "type": "merch", "coords": { "x": 100, "y": 300 }, "nodeId": "n-merch-west" },
+
+  { "id": "firstaid", "name": "First Aid", "type": "firstaid", "coords": { "x": 500, "y": 300 }, "nodeId": "n-firstaid" }
+]

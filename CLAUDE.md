@@ -87,6 +87,11 @@ Keep this structure. Don't reorganize without a concrete reason.
 - **Mock data is toggled by `NEXT_PUBLIC_MOCK_MODE=true`.** Every data-layer function checks this flag and routes to `/lib/mock/` or Firestore accordingly. This is critical — the demo runs in mock mode.
 - **Tailwind only.** No CSS modules, no styled-components, no inline `style={}` except for dynamic SVG coords.
 - **Imports:** absolute paths via `@/` alias. No `../../../`.
+- **Data-layer abstraction (`/lib/data/*.ts`).** Components and hooks never import from `/lib/mock/` or `/lib/firebase/` directly. All data access goes through `/lib/data/`. Each function in `/lib/data/` branches on `NEXT_PUBLIC_MOCK_MODE`: mock branch is the live path for demo; Firestore branch throws `"not implemented"` until wired.
+- **Mock store is a `globalThis` singleton** (`globalThis._stadiumiqMockStore`) so it survives Next.js HMR without losing state. Same pattern for any other server-side singletons.
+- **Density polling interval: 500ms.** The mock branch of `subscribeToDensity` polls `/api/density` every 500ms, giving ≤500ms latency after an admin event — well within the 2-second demo requirement.
+- **Venue SVG viewBox: `0 0 1000 600`.** All POI coords in `pois.json` are in this coordinate space. Do not change the viewBox without updating all coords.
+- **SVG fill animation via Framer Motion `<motion.circle animate={{ fill }}>`.** Use hex color values (not Tailwind classes) for SVG fills. Transition: `{ duration: 0.4, ease: "easeOut" }`.
 
 ---
 
