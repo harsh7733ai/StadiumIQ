@@ -12,12 +12,12 @@
 
 | Tab | URL | Purpose |
 |-----|-----|---------|
-| 1 | `https://stadiumiq.vercel.app/` | Landing — first thing judges see |
-| 2 | `https://stadiumiq.vercel.app/map` | Heatmap demo |
-| 3 | `https://stadiumiq.vercel.app/concierge` | AI concierge |
-| 4 | `https://stadiumiq.vercel.app/admin` | Pre-loaded, stay hidden until needed |
-| 5 | `https://stadiumiq.vercel.app/order?poi=food-beer` | Order flow |
-| 6 | `https://stadiumiq.vercel.app/analytics` | Operator view |
+| 1 | `https://stadium-iq-phi.vercel.app/` | Landing — first thing judges see |
+| 2 | `https://stadium-iq-phi.vercel.app/map` | Heatmap demo |
+| 3 | `https://stadium-iq-phi.vercel.app/concierge` | AI concierge |
+| 4 | `https://stadium-iq-phi.vercel.app/admin` | Pre-loaded, stay hidden until needed |
+| 5 | `https://stadium-iq-phi.vercel.app/order?poi=food-beer` | Order flow |
+| 6 | `https://stadium-iq-phi.vercel.app/analytics` | Operator view |
 
 4. On Tab 4 (`/admin`), click **"Reset"** once to put crowd back to baseline
 5. On Tab 3 (`/concierge`), clear any previous messages (refresh the tab)

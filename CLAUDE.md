@@ -231,7 +231,7 @@ If context gets long or stale, `/clear` and re-anchor on this file.
 
 ## Deployment
 
-- **Live URL:** https://stadiumiq.vercel.app (update once confirmed after first deploy)
+- **Live URL:** https://stadium-iq-phi.vercel.app
 - **Region:** `bom1` (Mumbai) — pinned in `vercel.json` for lowest demo latency
 - **Mock state:** `globalThis` singletons survive warm Lambdas. Cold-start guard: `store.ts` lazy-hydrates crowd densities from `densityFor(0, type)` if map is empty on first read.
 - **Keepalive:** `KeepaliveBoot` fires HEAD `/api/density` every 60s in production to keep the Lambda warm.
