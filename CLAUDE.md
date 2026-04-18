@@ -229,6 +229,26 @@ If context gets long or stale, `/clear` and re-anchor on this file.
 
 ---
 
+## Deployment
+
+- **Live URL:** https://stadiumiq.vercel.app (update once confirmed after first deploy)
+- **Region:** `bom1` (Mumbai) — pinned in `vercel.json` for lowest demo latency
+- **Mock state:** `globalThis` singletons survive warm Lambdas. Cold-start guard: `store.ts` lazy-hydrates crowd densities from `densityFor(0, type)` if map is empty on first read.
+- **Keepalive:** `KeepaliveBoot` fires HEAD `/api/density` every 60s in production to keep the Lambda warm.
+- **Env vars on Vercel (Production scope):**
+  - `ANTHROPIC_API_KEY`
+  - `NEXT_PUBLIC_MOCK_MODE=true`
+  - `NEXT_PUBLIC_BASE_URL=https://stadiumiq.vercel.app`
+- **Deploy command:** `npx vercel --prod` from project root
+- **Demo docs:** `docs/DEMO_SCRIPT.md` (3-min timed script) · `docs/DEMO_CHECKLIST.md` (11-item smoke test)
+- **Backup video:** Record to `docs/demo-backup.mp4` using Win+G (Game Bar) — non-negotiable before presenting.
+
+## Session 8 (if needed)
+
+Pitch deck slides only + buffer. No new features. All code is complete.
+
+---
+
 ## Roadmap items (for the pitch, not the build)
 
 Mention these verbally in the demo as "next up" — do NOT build them:
