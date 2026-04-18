@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 import { ThemeProvider } from "next-themes";
 import { Toaster } from "@/components/ui/sonner";
+import { BRAND } from "@/lib/brand";
 import "./globals.css";
 
 const geistSans = localFont({
@@ -17,14 +18,28 @@ const geistMono = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "StadiumIQ — Your Venue Intelligence App",
-  description:
-    "Live crowd intelligence, virtual queues, and an AI concierge for stadium attendees.",
+  title: {
+    default: `${BRAND.name} — ${BRAND.tagline}`,
+    template: `%s · ${BRAND.name}`,
+  },
+  description: BRAND.description,
+  openGraph: {
+    title: BRAND.name,
+    description: BRAND.description,
+    siteName: BRAND.name,
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: BRAND.name,
+    description: BRAND.description,
+  },
 };
 
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
+  maximumScale: 1,
   themeColor: "#0f172a",
 };
 

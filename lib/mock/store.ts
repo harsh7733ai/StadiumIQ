@@ -1,3 +1,6 @@
+import { densityFor } from "@/lib/mock/matchTimeline";
+import rawPois from "@/public/venue/pois.json";
+
 type DensityMap = Record<string, number>;
 type Listener = (map: DensityMap) => void;
 
@@ -7,6 +10,14 @@ export interface MockStore {
   set(poiId: string, value: number): void;
   setMany(updates: DensityMap): void;
   subscribe(listener: Listener): () => void;
+}
+
+function seedBaseline(data: DensityMap) {
+  for (const poi of rawPois) {
+    if (!(poi.id in data)) {
+      data[poi.id] = densityFor(0, poi.type as Parameters<typeof densityFor>[1]);
+    }
+  }
 }
 
 function createStore(): MockStore {
@@ -20,6 +31,7 @@ function createStore(): MockStore {
 
   return {
     getAll() {
+      if (Object.keys(data).length === 0) seedBaseline(data);
       return { ...data };
     },
     get(poiId) {

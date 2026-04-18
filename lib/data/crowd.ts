@@ -1,3 +1,5 @@
+import { mockStore } from "@/lib/mock/store";
+
 const IS_MOCK = process.env.NEXT_PUBLIC_MOCK_MODE === "true";
 
 export type DensityMap = Record<string, number>;
@@ -69,4 +71,9 @@ export function setManyDensities(updates: DensityMap): void {
     return;
   }
   throw new Error("Firestore setManyDensities not implemented");
+}
+
+export function getDensitySnapshot(): DensityMap {
+  if (IS_MOCK) return mockStore.getAll();
+  throw new Error("Firestore getDensitySnapshot not implemented");
 }

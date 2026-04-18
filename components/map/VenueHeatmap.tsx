@@ -32,9 +32,10 @@ interface Props {
   pois: Poi[];
   density: DensityMap;
   onSelect?: (poiId: string) => void;
+  children?: React.ReactNode;
 }
 
-export function VenueHeatmap({ pois, density, onSelect }: Props) {
+export function VenueHeatmap({ pois, density, onSelect, children }: Props) {
   return (
     <svg
       viewBox="0 0 1000 600"
@@ -92,6 +93,9 @@ export function VenueHeatmap({ pois, density, onSelect }: Props) {
         strokeDasharray="6 4"
         opacity={0.4}
       />
+
+      {/* ── Overlay layer (route, user marker) ───────────────────────── */}
+      {children}
 
       {/* ── POI markers ───────────────────────────────────────────────── */}
       {pois.map((poi) => {

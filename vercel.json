@@ -1,0 +1,12 @@
+{
+  "regions": ["bom1"],
+  "functions": {
+    "app/api/concierge/route.ts": { "maxDuration": 30 },
+    "app/api/simulate/route.ts": { "maxDuration": 30 },
+    "app/api/order/route.ts": { "maxDuration": 30 },
+    "app/api/order/[id]/advance/route.ts": { "maxDuration": 30 },
+    "app/api/density/route.ts": { "maxDuration": 30 },
+    "app/api/analytics/route.ts": { "maxDuration": 30 },
+    "app/api/clock/route.ts": { "maxDuration": 30 }
+  }
+}

@@ -1,10 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import type { SimulateEvent } from "@/lib/mock/events";
+import type { Order, OrderState } from "@/lib/schemas/order";
+import { subscribeToAllOrders, advanceOrder } from "@/lib/data/orders";
 
 interface EventButton {
   event: SimulateEvent;
@@ -46,11 +48,27 @@ const EVENT_BUTTONS: EventButton[] = [
   },
 ];
 
+const STATE_BADGE: Record<OrderState, string> = {
+  placed:    "bg-slate-700 text-slate-300",
+  preparing: "bg-yellow-900 text-yellow-300",
+  ready:     "bg-green-900 text-green-300",
+  collected: "bg-slate-800 text-slate-500",
+};
+
 export default function AdminPage() {
-  const [loading, setLoading] = useState<SimulateEvent | null>(null);
+  const [simLoading, setSimLoading] = useState<SimulateEvent | null>(null);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [advancingId, setAdvancingId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const unsubscribe = subscribeToAllOrders((all) => {
+      setOrders([...all].sort((a, b) => b.createdAt - a.createdAt));
+    });
+    return unsubscribe;
+  }, []);
 
   async function dispatch(event: SimulateEvent) {
-    setLoading(event);
+    setSimLoading(event);
     try {
       const res = await fetch("/api/simulate", {
         method: "POST",
@@ -65,18 +83,31 @@ export default function AdminPage() {
       }
 
       const label = EVENT_BUTTONS.find((b) => b.event === event)?.label ?? event;
-      toast.success(`${label} dispatched`, {
-        description: "Heatmap updating…",
-      });
+      toast.success(`${label} dispatched`, { description: "Heatmap updating…" });
     } catch {
       toast.error("Network error — is the dev server running?");
     } finally {
-      setLoading(null);
+      setSimLoading(null);
     }
   }
 
+  async function handleAdvance(order: Order) {
+    setAdvancingId(order.id);
+    try {
+      const updated = await advanceOrder(order.id);
+      toast.success(`Order #${order.pickupCode} → ${updated.state}`);
+    } catch {
+      toast.error("Failed to advance order");
+    } finally {
+      setAdvancingId(null);
+    }
+  }
+
+  const activeOrders = orders.filter((o) => o.state !== "collected");
+
   return (
-    <main className="min-h-screen bg-slate-950 flex items-center justify-center p-6">
+    <main className="min-h-screen bg-slate-950 flex flex-col items-center py-8 px-4 gap-6">
+      {/* ── Sim controls ── */}
       <Card className="w-full max-w-md bg-slate-900 border-slate-700">
         <CardHeader>
           <CardTitle className="text-white text-xl">Demo Control</CardTitle>
@@ -91,10 +122,10 @@ export default function AdminPage() {
               <Button
                 variant={variant}
                 className="w-full justify-start text-left"
-                disabled={loading !== null}
-                onClick={() => dispatch(event)}
+                disabled={simLoading !== null}
+                onClick={() => void dispatch(event)}
               >
-                {loading === event ? (
+                {simLoading === event ? (
                   <span className="animate-pulse">Dispatching…</span>
                 ) : (
                   label
@@ -103,6 +134,50 @@ export default function AdminPage() {
               <p className="text-xs text-slate-500 pl-1">{description}</p>
             </div>
           ))}
+        </CardContent>
+      </Card>
+
+      {/* ── Active orders ── */}
+      <Card className="w-full max-w-md bg-slate-900 border-slate-700">
+        <CardHeader>
+          <CardTitle className="text-white text-xl">Active Orders</CardTitle>
+          <CardDescription className="text-slate-500 text-xs">
+            Advance orders to simulate kitchen progress
+          </CardDescription>
+        </CardHeader>
+
+        <CardContent className="flex flex-col gap-3">
+          {activeOrders.length === 0 ? (
+            <p className="text-sm text-slate-600 text-center py-4">
+              No active orders yet.
+            </p>
+          ) : (
+            activeOrders.map((order) => (
+              <div
+                key={order.id}
+                className="flex items-center gap-3 p-3 rounded-xl bg-slate-800 border border-slate-700"
+              >
+                <span className="text-2xl font-bold tabular-nums text-white tracking-widest">
+                  {order.pickupCode}
+                </span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-white truncate">{order.poiName}</p>
+                  <span className={`inline-block text-xs px-2 py-0.5 rounded-full mt-0.5 ${STATE_BADGE[order.state]}`}>
+                    {order.state}
+                  </span>
+                </div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="border-slate-600 text-slate-300 text-xs shrink-0"
+                  disabled={order.state === "collected" || advancingId === order.id}
+                  onClick={() => void handleAdvance(order)}
+                >
+                  {advancingId === order.id ? "…" : "Advance"}
+                </Button>
+              </div>
+            ))
+          )}
         </CardContent>
       </Card>
     </main>

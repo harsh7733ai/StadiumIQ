@@ -47,3 +47,7 @@ export function stopSimulation(): void {
 export function resetSimulationClock(): void {
   getState().matchMinute = 0;
 }
+
+export function getMatchMinute(): number {
+  return getState().matchMinute;
+}

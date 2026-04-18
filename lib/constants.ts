@@ -33,6 +33,12 @@ export const PICKUP_CODE_LENGTH = 4;
 // Group session code length
 export const GROUP_CODE_LENGTH = 6;
 
+// Routing constants
+export const USER_SEAT_NODE_ID = "n-seat";
+export const CROWD_PENALTY_MAX = 2.0;
+export const WALKING_SPEED_SVG_PER_SEC = 12;
+export const ROUTING_ETA_ROUND_TO_SEC = 5;
+
 // Match event density profiles
 export const MATCH_EVENTS = {
   START: "match_start",
