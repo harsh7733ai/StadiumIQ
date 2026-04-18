@@ -1,32 +1,31 @@
-import Anthropic from "@anthropic-ai/sdk";
+import Groq from "groq-sdk";
 import { z } from "zod";
 
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
+const groq = new Groq({
+  apiKey: process.env.GROQ_API_KEY,
 });
 
-const MODEL = "claude-sonnet-4-5";
+const MODEL = "llama-3.3-70b-versatile";
 
 export async function structuredChat<T>(
   messages: Array<{ role: "user" | "assistant"; content: string }>,
   schema: z.ZodType<T>,
   systemPrompt: string,
 ): Promise<T> {
-  const response = await anthropic.messages.create({
+  const response = await groq.chat.completions.create({
     model: MODEL,
     max_tokens: 1024,
-    system: systemPrompt,
-    messages,
+    messages: [
+      { role: "system", content: systemPrompt },
+      ...messages,
+    ],
   });
 
-  const textBlock = response.content.find((block) => block.type === "text");
-  if (!textBlock || textBlock.type !== "text") {
-    throw new Error("No text content in Claude response");
-  }
+  const text = response.choices[0]?.message?.content ?? "";
 
-  const jsonMatch = textBlock.text.match(/\{[\s\S]*\}/);
+  const jsonMatch = text.match(/\{[\s\S]*\}/);
   if (!jsonMatch) {
-    throw new Error("No JSON object found in Claude response");
+    throw new Error("No JSON object found in Groq response");
   }
 
   const parsed: unknown = JSON.parse(jsonMatch[0]);
@@ -36,30 +35,27 @@ export async function structuredChat<T>(
 export async function structuredQuery<T>(
   prompt: string,
   schema: z.ZodType<T>,
-  systemPrompt?: string
+  systemPrompt?: string,
 ): Promise<T> {
-  const response = await anthropic.messages.create({
+  const response = await groq.chat.completions.create({
     model: MODEL,
     max_tokens: 1024,
-    system:
-      systemPrompt ??
-      "You are a helpful stadium concierge assistant. Always respond with valid JSON matching the requested schema.",
     messages: [
       {
-        role: "user",
-        content: prompt,
+        role: "system",
+        content:
+          systemPrompt ??
+          "You are a helpful stadium concierge assistant. Always respond with valid JSON matching the requested schema.",
       },
+      { role: "user", content: prompt },
     ],
   });
 
-  const textBlock = response.content.find((block) => block.type === "text");
-  if (!textBlock || textBlock.type !== "text") {
-    throw new Error("No text content in Claude response");
-  }
+  const text = response.choices[0]?.message?.content ?? "";
 
-  const jsonMatch = textBlock.text.match(/\{[\s\S]*\}/);
+  const jsonMatch = text.match(/\{[\s\S]*\}/);
   if (!jsonMatch) {
-    throw new Error("No JSON object found in Claude response");
+    throw new Error("No JSON object found in Groq response");
   }
 
   const parsed: unknown = JSON.parse(jsonMatch[0]);
