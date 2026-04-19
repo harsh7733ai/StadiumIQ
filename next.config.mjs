@@ -7,7 +7,7 @@
  *  - default-src 'self' to block third-party origins by default
  *  - script-src allows 'unsafe-inline' (Next.js inlines hydration scripts) and
  *    Google Analytics (gated behind NEXT_PUBLIC_GA_ID; omitted if unset)
- *  - connect-src permits Groq + Firebase + Google Analytics endpoints
+ *  - connect-src permits Gemini + Firebase + Google Analytics endpoints
  *  - frame-ancestors 'none' blocks clickjacking
  */
 const securityHeaders = [
@@ -31,7 +31,7 @@ const securityHeaders = [
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "font-src 'self' data: https://fonts.gstatic.com",
       "img-src 'self' data: blob: https://www.google-analytics.com https://www.googletagmanager.com",
-      "connect-src 'self' https://api.groq.com https://*.googleapis.com https://*.firebaseio.com https://firestore.googleapis.com https://www.google-analytics.com https://*.google-analytics.com https://*.analytics.google.com",
+      "connect-src 'self' https://generativelanguage.googleapis.com https://*.googleapis.com https://*.firebaseio.com https://firestore.googleapis.com https://firebaseinstallations.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://www.google-analytics.com https://*.google-analytics.com https://*.analytics.google.com",
       "frame-ancestors 'none'",
       "base-uri 'self'",
       "form-action 'self'",

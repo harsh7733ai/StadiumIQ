@@ -5,6 +5,7 @@ import { useConcierge } from "@/hooks/useConcierge";
 import { ChatMessage } from "@/components/concierge/ChatMessage";
 import { ComposerBar } from "@/components/concierge/ComposerBar";
 import { SuggestedPrompts } from "@/components/concierge/SuggestedPrompts";
+import { trackEvent } from "@/lib/firebase/analytics";
 
 export default function ConciergePage() {
   const { messages, send, loading } = useConcierge();
@@ -23,6 +24,7 @@ export default function ConciergePage() {
 
   async function handleSend(text: string) {
     setPendingText(undefined);
+    void trackEvent("concierge_query", { length: text.length });
     await send(text);
   }
 
@@ -31,7 +33,7 @@ export default function ConciergePage() {
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-slate-800">
         <h1 className="text-lg font-semibold text-white">AI Concierge</h1>
-        <span className="text-xs text-slate-400">Powered by Claude</span>
+        <span className="text-xs text-slate-400">Powered by Google Gemini</span>
       </div>
 
       {/* Message list */}

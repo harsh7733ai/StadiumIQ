@@ -1,11 +1,11 @@
 # StadiumIQ
 
-> **The AI copilot for every seat in the house.**
-> Live crowd intelligence, crowd-weighted routing, virtual concession queues, and an AI concierge — a mobile PWA that turns any sporting venue into a frictionless experience.
+> **Challenge vertical: Live Events & Venues.**
+> A mobile PWA that makes a 60,000-seat stadium feel navigable — live crowd intelligence, crowd-weighted routing, virtual concession queues, and a Gemini-powered AI concierge. Built so the average fan stops losing 23 minutes of a 3-hour match to queues.
 
 **Live demo:** [stadium-iq-phi.vercel.app](https://stadium-iq-phi.vercel.app)
-**Stack:** Next.js 14 · TypeScript (strict) · Tailwind · Framer Motion · Groq Llama 3.3 70B · Zod · Vercel
-**Status:** Hackathon build — production-deployed, mock-driven for demo, ready to swap in real Firestore + CV signals.
+**Stack:** Next.js 14 · TypeScript (strict) · Tailwind · Framer Motion · **Google Gemini 1.5 Flash** · **Firebase (Auth + Firestore + Analytics)** · **Google Analytics 4** · Zod · Vercel
+**Status:** Hackathon build — production-deployed, mock-driven for demo, wired to real Google services (Gemini for concierge, Firebase anon-auth + Firestore order mirror, GA4 event tracking).
 
 ---
 
@@ -44,7 +44,7 @@ weight = baseDistance × (1 + CROWD_PENALTY_MAX × max(density[from], density[to
 
 ### 3. AI concierge (`/concierge`)
 
-Chat UI wired to a Groq `llama-3.3-70b-versatile` backend. Every request injects **the current live venue state** (all POI densities + user location + estimated wait times) into the system prompt, then forces a structured response via Zod schema:
+Chat UI wired to **Google Gemini 1.5 Flash** (`@google/generative-ai`) with `responseMimeType: "application/json"` for structured output. Every request injects **the current live venue state** (all POI densities + user location + estimated wait times) into the system prompt, then forces a structured response via Zod schema:
 
 ```ts
 const ConciergeResponseSchema = z.object({
@@ -54,7 +54,7 @@ const ConciergeResponseSchema = z.object({
 });
 ```
 
-If the model returns invalid JSON, we extract the first `{...}` block with a tolerant regex and re-parse. If *that* fails, we surface a friendly fallback — **never raw LLM text to the UI.** Assistant messages are stored as serialized JSON so the model sees its own prior structured responses in context.
+If the model returns invalid JSON, we extract the first `{...}` block with a tolerant regex and re-parse. If *that* fails, we surface a friendly fallback — **never raw LLM text to the UI.** Assistant messages are stored as serialized JSON so the model sees its own prior structured responses in context. Every query is mirrored to Firestore (`concierge_queries` collection) and logged as a GA4 `concierge_query` event.
 
 Tap **"Take me there"** on any recommendation → deep-links to `/map?nav=<poiId>` with the route pre-drawn.
 
@@ -90,9 +90,16 @@ The demo money shot. One click on "Halftime rush" mutates density across all foo
 └──────────────┘                                                │
                                                                 ▼
                                                       ┌──────────────────┐
-                                                      │ Groq Llama 3.3   │
-                                                      │ 70B Versatile    │
+                                                      │ Google Gemini    │
+                                                      │ 1.5 Flash        │
                                                       │ (concierge only) │
+                                                      └──────────────────┘
+                                                                │
+                                                                ▼
+                                                      ┌──────────────────┐
+                                                      │ Firebase Auth    │
+                                                      │ Firestore mirror │
+                                                      │ GA4 events       │
                                                       └──────────────────┘
 ```
 
@@ -106,7 +113,7 @@ Most crowd/routing demos cheat by treating the map as static. StadiumIQ's hard p
 
 - **Serverless cold starts lose in-memory state.** Fixed with `bom1` region pinning + 60s keepalive ping + lazy baseline hydration on every read.
 - **Route recomputes must happen client-side** to feel instant, so the whole 40-node graph ships as static JSON and Dijkstra runs in the browser.
-- **LLM structured output is unreliable.** We wrap Groq with a regex-extract-then-Zod-parse pipeline so a single malformed response never breaks the UX.
+- **LLM structured output is unreliable.** We wrap Gemini with `responseMimeType: "application/json"` **plus** a regex-extract-then-Zod-parse fallback, so a single malformed response never breaks the UX.
 - **HMR wipes server state.** `globalThis.__stadiumiq_crowd_store` / `__stadiumiq_order_store` survive hot reloads.
 
 ---
@@ -128,7 +135,10 @@ Full market analysis and pitch in [`docs/PITCH.md`](docs/PITCH.md).
 |---|---|---|
 | Framework | Next.js 14 App Router + TS strict | Server components = tiny bundles, route handlers = zero-config API |
 | Styling | Tailwind + shadcn/ui + Framer Motion | Design-token discipline, production-grade micro-interactions |
-| LLM | Groq `llama-3.3-70b-versatile` | Sub-second inference, free tier, no credit card needed |
+| LLM | Google Gemini `gemini-1.5-flash` | Native JSON mode, generous free tier, 1M-token context |
+| Auth | Firebase Auth (anonymous) | Zero-friction fan onboarding, identity survives refresh |
+| Mirror store | Firestore (`orders`, `concierge_queries`) | Fire-and-forget secondary writes for analytics + recovery |
+| Analytics | Google Analytics 4 + Firebase Analytics | Real product telemetry (`app_open`, `concierge_query`, `order_placed`) |
 | Validation | Zod at every boundary | Single source of truth for schemas + inferred TS types |
 | Deployment | Vercel (`bom1`) | Edge-adjacent, zero-config, free |
 | Maps | Hand-traced SVG | No map-tile deps, infinite zoom, brand-native |
@@ -144,20 +154,27 @@ Full conventions in [`CLAUDE.md`](CLAUDE.md).
 git clone https://github.com/harsh8968/StadiumIQ.git
 cd StadiumIQ
 npm install
-cp .env.production.example .env.local
-# Then edit .env.local and paste your Groq key
+cp .env.local.example .env.local
+# Then edit .env.local with your Google service keys (see below)
 npm run dev
 ```
 
-Visit [http://localhost:3000](http://localhost:3000). The app runs entirely in mock mode — no Firebase, no external deps except the concierge's Groq key.
+Visit [http://localhost:3000](http://localhost:3000). The app runs in mock mode for crowd density, but the concierge and telemetry layers call real Google services.
 
-Get a free Groq API key at [console.groq.com](https://console.groq.com) (no credit card required).
+- Get a free **Gemini** API key at [aistudio.google.com](https://aistudio.google.com/apikey)
+- Create a **Firebase** project at [console.firebase.google.com](https://console.firebase.google.com) and enable Anonymous Auth + Firestore
+- Create a **GA4** property at [analytics.google.com](https://analytics.google.com) and copy the Measurement ID
 
 ## Environment variables
 
 ```env
-NEXT_PUBLIC_MOCK_MODE=true              # Required for demo
-GROQ_API_KEY=gsk_...                    # Required for /concierge
+NEXT_PUBLIC_MOCK_MODE=true                          # Required for demo
+GEMINI_API_KEY=AIza...                              # Required for /concierge
+NEXT_PUBLIC_FIREBASE_API_KEY=AIza...                # Firebase web config
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=<proj>.firebaseapp.com
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=<proj>
+NEXT_PUBLIC_FIREBASE_APP_ID=1:...:web:...
+NEXT_PUBLIC_GA_ID=G-XXXXXXXX                        # Google Analytics 4
 NEXT_PUBLIC_BASE_URL=http://localhost:3000
 ```
 
@@ -183,20 +200,21 @@ app/
   (app)/analytics/               Operator dashboard
   admin/                         Demo control panel
   api/
-    concierge/route.ts           Groq proxy + Zod
+    concierge/route.ts           Gemini proxy + Zod
     simulate/route.ts            Match-event trigger
     order/route.ts               Order CRUD
     density/route.ts             Live crowd state
 components/
   map/                           SVG + POI + route overlay
-  shared/                        KeepaliveBoot, MockSimulationBoot
+  shared/                        KeepaliveBoot, MockSimulationBoot, FirebaseBoot
   ui/                            shadcn primitives
 lib/
   routing/                       Dijkstra + graph parser
   mock/                          Timeline, menus, store
   data/                          Abstraction layer (mock ↔ Firestore)
   schemas/                       Zod schemas
-  claude/                        Groq client wrapper
+  gemini/                        Google Gemini client wrapper
+  firebase/                      Client, Auth, Firestore mirror, Analytics
 public/venue/
   floor-plan.svg                 Hand-traced venue
   pois.json                      15 POIs

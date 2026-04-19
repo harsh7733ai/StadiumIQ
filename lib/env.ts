@@ -6,7 +6,7 @@ import { z } from "zod";
  * get fail-fast startup on misconfiguration and a single source of truth.
  */
 const ServerEnvSchema = z.object({
-  GROQ_API_KEY: z.string().min(1).optional(),
+  GEMINI_API_KEY: z.string().min(1).optional(),
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
 });
 

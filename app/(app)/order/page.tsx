@@ -13,6 +13,8 @@ import { useCrowdDensity } from "@/hooks/useCrowdDensity";
 import { placeOrder, subscribeToUserOrders } from "@/lib/data/orders";
 import { getMenuForPoi } from "@/lib/mock/menus";
 import { useUserId } from "@/lib/user/identity";
+import { mirrorOrderToFirestore } from "@/lib/firebase/orders";
+import { trackEvent } from "@/lib/firebase/analytics";
 import type { Order, OrderItem } from "@/lib/schemas/order";
 import rawPois from "@/public/venue/pois.json";
 
@@ -73,7 +75,14 @@ function OrderPageInner() {
           qty: cart[item.id] ?? 0,
         }));
 
-      await placeOrder({ poiId: selectedPoi.id, items }, userId);
+      const created = await placeOrder({ poiId: selectedPoi.id, items }, userId);
+      // Mirror to Firestore (Google Cloud persistence) — fire-and-forget.
+      void mirrorOrderToFirestore(created);
+      void trackEvent("order_placed", {
+        poiId: selectedPoi.id,
+        totalCents: created.totalCents,
+        itemCount: items.length,
+      });
       setCart({});
     } finally {
       setPlacing(false);
