@@ -68,6 +68,9 @@ export function OrderStatusCard({ order }: Props) {
       layout
       animate={order.state === "ready" ? { scale: [1, 1.03, 1] } : {}}
       transition={{ duration: 0.4 }}
+      role="status"
+      aria-live="polite"
+      aria-label={`Order ${order.pickupCode} at ${order.poiName} is ${config.label}`}
       className="rounded-2xl bg-slate-900 border border-slate-700 p-4 space-y-4"
     >
       {/* Header */}

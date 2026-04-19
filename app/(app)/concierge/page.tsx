@@ -37,12 +37,18 @@ export default function ConciergePage() {
       </div>
 
       {/* Message list */}
-      <div className="flex-1 overflow-y-auto px-3 py-4 space-y-3">
+      <div
+        role="log"
+        aria-live="polite"
+        aria-relevant="additions"
+        aria-label="Concierge conversation"
+        className="flex-1 overflow-y-auto px-3 py-4 space-y-3"
+      >
         {messages.map((msg, i) => (
           <ChatMessage key={i} message={msg} />
         ))}
         {loading && (
-          <div className="flex justify-start">
+          <div className="flex justify-start" role="status" aria-live="polite">
             <div className="bg-slate-800 rounded-2xl rounded-tl-sm px-4 py-2.5">
               <span className="text-sm text-slate-400 animate-pulse">Thinking…</span>
             </div>

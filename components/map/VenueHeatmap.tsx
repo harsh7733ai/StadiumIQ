@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import type { Poi } from "@/lib/schemas/poi";
 import type { DensityMap } from "@/lib/data/crowd";
 import { CROWD_THRESHOLDS } from "@/lib/constants";
+import { useReducedMotion } from "@/hooks/useReducedMotion";
 
 // Hex values matching CLAUDE.md thresholds
 const DENSITY_COLORS = {
@@ -36,6 +37,7 @@ interface Props {
 }
 
 export function VenueHeatmap({ pois, density, onSelect, children }: Props) {
+  const prefersReducedMotion = useReducedMotion();
   return (
     <svg
       viewBox="0 0 1000 600"
@@ -143,7 +145,7 @@ export function VenueHeatmap({ pois, density, onSelect, children }: Props) {
               stroke="#0f172a"
               strokeWidth={2}
               animate={{ fill }}
-              transition={{ duration: 0.4, ease: "easeOut" }}
+              transition={{ duration: prefersReducedMotion ? 0 : 0.4, ease: "easeOut" }}
             />
 
             {/* POI name label */}
