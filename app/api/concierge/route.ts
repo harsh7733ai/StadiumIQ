@@ -8,6 +8,7 @@ import { structuredChat } from "@/lib/gemini/client";
 import { getGraph, shortestPath } from "@/lib/routing";
 import { USER_SEAT_NODE_ID, WALKING_SPEED_SVG_PER_SEC, ROUTING_ETA_ROUND_TO_SEC } from "@/lib/constants";
 import { rateLimit, clientKeyFrom } from "@/lib/security/rateLimit";
+import { heuristicConciergeReply } from "@/lib/concierge/heuristic";
 import rawPois from "@/public/venue/pois.json";
 
 const pois = PoisSchema.parse(rawPois);
@@ -17,7 +18,7 @@ const CONCIERGE_RATE_LIMIT_MAX = 20;
 const CONCIERGE_RATE_LIMIT_WINDOW_MS = 60_000;
 
 const FALLBACK: ConciergeResponse = {
-  reply: "I'm having a moment — please ask me again!",
+  reply: "I couldn't read that question — can you rephrase?",
   recommendation: null,
   action: "info",
 };
@@ -57,45 +58,48 @@ export async function POST(request: Request) {
   }
 
   const { messages, userLocation } = parsed.data;
+  const density = getDensitySnapshot();
+  const graph = getGraph();
+
+  const lastUserMessage = [...messages].reverse().find((m) => m.role === "user")?.content ?? "";
+
+  function enrichWalkTime(raw: ConciergeResponse): ConciergeResponse {
+    if (raw.recommendation === null) return raw;
+    if (!poiIds.has(raw.recommendation.poiId)) {
+      return { ...raw, recommendation: null, action: "info" };
+    }
+    const targetPoi = pois.find((p) => p.id === raw.recommendation!.poiId);
+    if (!targetPoi) return raw;
+    const route = shortestPath(
+      graph,
+      USER_SEAT_NODE_ID,
+      targetPoi.nodeId,
+      density,
+      WALKING_SPEED_SVG_PER_SEC,
+      ROUTING_ETA_ROUND_TO_SEC,
+    );
+    if (!route) return raw;
+    return {
+      ...raw,
+      recommendation: { ...raw.recommendation, walkTimeSec: route.etaSec },
+    };
+  }
 
   try {
-    const density = getDensitySnapshot();
     const systemPrompt = buildSystemPrompt(pois, density, userLocation);
-    const graph = getGraph();
-
     const raw = await structuredChat<ConciergeResponse>(
       messages,
       ConciergeResponseSchema,
       systemPrompt,
     );
-
-    // Validate poiId exists and enrich walkTimeSec from Dijkstra
-    if (raw.recommendation !== null) {
-      if (!poiIds.has(raw.recommendation.poiId)) {
-        return NextResponse.json({ ...raw, recommendation: null, action: "info" } satisfies ConciergeResponse);
-      }
-
-      const targetPoi = pois.find((p) => p.id === raw.recommendation!.poiId);
-      if (targetPoi) {
-        const route = shortestPath(
-          graph,
-          USER_SEAT_NODE_ID,
-          targetPoi.nodeId,
-          density,
-          WALKING_SPEED_SVG_PER_SEC,
-          ROUTING_ETA_ROUND_TO_SEC,
-        );
-        if (route) {
-          return NextResponse.json({
-            ...raw,
-            recommendation: { ...raw.recommendation, walkTimeSec: route.etaSec },
-          } satisfies ConciergeResponse);
-        }
-      }
-    }
-
-    return NextResponse.json(raw);
+    return NextResponse.json(enrichWalkTime(raw));
   } catch {
+    // Gemini failed (quota, network, malformed output). Degrade gracefully to a
+    // deterministic, crowd-aware recommendation so the UX never shows an error.
+    if (lastUserMessage.trim().length > 0) {
+      const heuristic = heuristicConciergeReply(lastUserMessage, pois, density);
+      return NextResponse.json(enrichWalkTime(heuristic));
+    }
     return NextResponse.json(FALLBACK);
   }
 }
