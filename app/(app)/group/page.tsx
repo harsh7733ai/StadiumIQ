@@ -104,21 +104,23 @@ export default function GroupPage() {
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="space-y-2">
-            <label className="text-sm text-slate-300">Your Display Name</label>
+            <label htmlFor="displayName" className="text-sm text-slate-300">Your Display Name</label>
             <Input 
+              id="displayName"
               placeholder="e.g. Alex" 
               value={displayName} 
               onChange={(e) => setDisplayName(e.target.value)}
               className="bg-slate-800 border-slate-700 text-white placeholder:text-slate-500"
+              aria-label="Your Display Name"
             />
           </div>
 
           <div className="space-y-4 pt-4 border-t border-slate-800">
-            <Button onClick={handleCreate} className="w-full bg-sky-600 hover:bg-sky-500 text-white">
+            <Button onClick={handleCreate} className="w-full bg-sky-600 hover:bg-sky-500 text-white" aria-label="Create New Session">
               Create New Session
             </Button>
             
-            <div className="relative">
+            <div className="relative" aria-hidden="true">
               <div className="absolute inset-0 flex items-center">
                 <span className="w-full border-t border-slate-800" />
               </div>
@@ -134,8 +136,9 @@ export default function GroupPage() {
                 onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
                 className="bg-slate-800 border-slate-700 text-white uppercase text-center tracking-widest placeholder:text-slate-500"
                 maxLength={6}
+                aria-label="6 character join code"
               />
-              <Button onClick={handleJoin} variant="outline" className="border-slate-700 text-slate-300 bg-slate-800 hover:bg-slate-700">
+              <Button onClick={handleJoin} variant="outline" className="border-slate-700 text-slate-300 bg-slate-800 hover:bg-slate-700" aria-label="Join existing session">
                 Join
               </Button>
             </div>

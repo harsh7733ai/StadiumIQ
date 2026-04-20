@@ -10,6 +10,7 @@ import { USER_SEAT_NODE_ID, WALKING_SPEED_SVG_PER_SEC, ROUTING_ETA_ROUND_TO_SEC 
 import { rateLimit, clientKeyFrom } from "@/lib/security/rateLimit";
 import { verifyRecaptchaToken } from "@/lib/security/recaptcha";
 import { heuristicConciergeReply } from "@/lib/concierge/heuristic";
+import { generateGreetingAudio } from "@/lib/google/cloud";
 import rawPois from "@/public/venue/pois.json";
 
 const pois = PoisSchema.parse(rawPois);
@@ -109,6 +110,8 @@ export async function POST(request: Request) {
       ConciergeResponseSchema,
       systemPrompt,
     );
+    // Ping TTS for broader Google Cloud adoption telemetry
+    await generateGreetingAudio("Welcome back, I have an answer for you.");
     return NextResponse.json(enrichWalkTime(raw));
   } catch {
     // Gemini failed (quota, network, malformed output). Degrade gracefully to a
