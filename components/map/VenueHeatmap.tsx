@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react";
 import { motion } from "framer-motion";
 import type { Poi } from "@/lib/schemas/poi";
 import type { DensityMap } from "@/lib/data/crowd";
@@ -107,62 +108,75 @@ export function VenueHeatmap({ pois, density, onSelect, children }: Props) {
       {children}
 
       {/* ── POI markers ───────────────────────────────────────────────── */}
-      {pois.map((poi) => {
-        const d = density[poi.id] ?? 0;
-        const fill = colorForDensity(d);
-        const r = POI_TYPE_RADIUS[poi.type];
-        const labelY = poi.coords.y + r + 14;
-
-        return (
-          <g
-            key={poi.id}
-            onClick={() => onSelect?.(poi.id)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" || e.key === " ") {
-                e.preventDefault();
-                onSelect?.(poi.id);
-              }
-            }}
-            className="cursor-pointer focus:outline-none focus-visible:[&>circle:nth-child(2)]:stroke-sky-400"
-            role="button"
-            tabIndex={0}
-            aria-label={`${poi.name}, ${poi.type}, ${Math.round(d * 100)}% crowd density`}
-          >
-            {/* Glow ring — static, always present */}
-            <circle
-              cx={poi.coords.x}
-              cy={poi.coords.y}
-              r={r + 6}
-              fill={fill}
-              opacity={0.18}
-            />
-
-            {/* Animated fill circle */}
-            <motion.circle
-              cx={poi.coords.x}
-              cy={poi.coords.y}
-              r={r}
-              stroke="#0f172a"
-              strokeWidth={2}
-              animate={{ fill }}
-              transition={{ duration: prefersReducedMotion ? 0 : 0.4, ease: "easeOut" }}
-            />
-
-            {/* POI name label */}
-            <text
-              x={poi.coords.x}
-              y={labelY}
-              textAnchor="middle"
-              fill="#e2e8f0"
-              fontSize={10}
-              fontFamily="var(--font-geist-sans, sans-serif)"
-              className="pointer-events-none select-none"
-            >
-              {poi.name}
-            </text>
-          </g>
-        );
-      })}
+      {pois.map((poi) => (
+        <PoiMarker
+          key={poi.id}
+          poi={poi}
+          density={density[poi.id] ?? 0}
+          prefersReducedMotion={prefersReducedMotion}
+          onSelect={onSelect}
+        />
+      ))}
     </svg>
   );
 }
+
+const PoiMarker = React.memo(function PoiMarker({
+  poi,
+  density,
+  prefersReducedMotion,
+  onSelect,
+}: {
+  poi: Poi;
+  density: number;
+  prefersReducedMotion: boolean;
+  onSelect?: (id: string) => void;
+}) {
+  const fill = colorForDensity(density);
+  const r = POI_TYPE_RADIUS[poi.type];
+  const labelY = poi.coords.y + r + 14;
+
+  return (
+    <g
+      onClick={() => onSelect?.(poi.id)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onSelect?.(poi.id);
+        }
+      }}
+      className="cursor-pointer focus:outline-none focus-visible:[&>circle:nth-child(2)]:stroke-sky-400"
+      role="button"
+      tabIndex={0}
+      aria-label={`${poi.name}, ${poi.type}, ${Math.round(density * 100)}% crowd density`}
+    >
+      <circle
+        cx={poi.coords.x}
+        cy={poi.coords.y}
+        r={r + 6}
+        fill={fill}
+        opacity={0.18}
+      />
+      <motion.circle
+        cx={poi.coords.x}
+        cy={poi.coords.y}
+        r={r}
+        stroke="#0f172a"
+        strokeWidth={2}
+        animate={{ fill }}
+        transition={{ duration: prefersReducedMotion ? 0 : 0.4, ease: "easeOut" }}
+      />
+      <text
+        x={poi.coords.x}
+        y={labelY}
+        textAnchor="middle"
+        fill="#e2e8f0"
+        fontSize={10}
+        fontFamily="var(--font-geist-sans, sans-serif)"
+        className="pointer-events-none select-none"
+      >
+        {poi.name}
+      </text>
+    </g>
+  );
+});

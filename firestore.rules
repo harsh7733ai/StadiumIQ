@@ -49,18 +49,27 @@ service cloud.firestore {
     }
 
     // ── group_sessions/{sessionId} ─────────────────────────────────────────
-    // Any signed-in user can read a session (they need the 6-char code to find it).
-    // Only the creator can delete; members can join by writing their pin.
+    // Any signed-in user can read a session IF they are the creator or in the memberIds array.
+    // Only the creator can delete; members can join by updating memberIds.
     match /group_sessions/{sessionId} {
-      allow read: if isSignedIn();
+      allow read: if isSignedIn() && (
+        resource.data.createdBy == request.auth.uid ||
+        request.auth.uid in resource.data.memberIds
+      );
       allow create: if isSignedIn()
         && request.resource.data.createdBy == request.auth.uid;
-      allow update: if isSignedIn();
+      allow update: if isSignedIn() && (
+        resource.data.createdBy == request.auth.uid ||
+        request.auth.uid in resource.data.memberIds
+      ) && request.resource.data.createdBy == resource.data.createdBy;
       allow delete: if isSignedIn()
         && resource.data.createdBy == request.auth.uid;
 
       match /members/{memberId} {
-        allow read: if isSignedIn();
+        allow read: if isSignedIn() && (
+          get(/databases/$(database)/documents/group_sessions/$(sessionId)).data.createdBy == request.auth.uid ||
+          request.auth.uid in get(/databases/$(database)/documents/group_sessions/$(sessionId)).data.memberIds
+        );
         allow write: if isOwner(memberId);
       }
     }
