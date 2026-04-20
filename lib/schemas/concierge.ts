@@ -19,6 +19,14 @@ export type ConciergeMessage = z.infer<typeof ConciergeMessageSchema>;
 export const ConciergeRequestSchema = z.object({
   messages: z.array(ConciergeMessageSchema).min(1).max(CONCIERGE_MAX_HISTORY_LEN),
   userLocation: z.object({ nodeId: z.string().min(1).max(CONCIERGE_MAX_NODE_ID_LEN) }),
+  /**
+   * Optional reCAPTCHA v3 token. Produced client-side via
+   * `getRecaptchaToken("concierge")`. When the server has
+   * `RECAPTCHA_SECRET_KEY` configured, this is verified against Google's
+   * siteverify endpoint and scored. When the secret is unset the server
+   * fails open, so demo builds work without Google credentials.
+   */
+  recaptchaToken: z.string().max(4096).optional(),
 });
 export type ConciergeRequest = z.infer<typeof ConciergeRequestSchema>;
 

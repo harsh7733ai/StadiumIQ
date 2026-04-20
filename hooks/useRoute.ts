@@ -12,6 +12,8 @@ import {
 } from "@/lib/constants";
 import { PoisSchema } from "@/lib/schemas/poi";
 import rawPois from "@/public/venue/pois.json";
+import { conversions } from "@/lib/google/gtag";
+import { trackEvent } from "@/lib/firebase/analytics";
 
 const pois = PoisSchema.parse(rawPois);
 const poiByNodeId = new Map(pois.map((p) => [p.nodeId, p]));
@@ -31,6 +33,9 @@ export interface UseRouteResult {
 export function useRoute(toPoiId: string | null): UseRouteResult {
   const [result, setResult] = useState<UseRouteResult>({ path: [], etaSec: 0, loading: false });
   const densityRef = useRef<DensityMap>({});
+  // Emit `route_drawn` only once per distinct POI target to avoid spamming
+  // analytics when density updates re-run Dijkstra every 500ms.
+  const loggedTargetRef = useRef<string | null>(null);
 
   function computeRoute(density: DensityMap): void {
     if (!toPoiId) {
@@ -55,6 +60,15 @@ export function useRoute(toPoiId: string | null): UseRouteResult {
 
     if (route) {
       setResult({ path: route.path, etaSec: route.etaSec, loading: false });
+      if (loggedTargetRef.current !== toPoiId) {
+        loggedTargetRef.current = toPoiId;
+        conversions.routeDrawn(toPoiId, route.etaSec);
+        void trackEvent("route_drawn", {
+          poi_id: toPoiId,
+          eta_sec: route.etaSec,
+          hop_count: route.path.length,
+        });
+      }
     } else {
       setResult({ path: [], etaSec: 0, loading: false });
     }
@@ -63,6 +77,7 @@ export function useRoute(toPoiId: string | null): UseRouteResult {
   useEffect(() => {
     if (!toPoiId) {
       setResult({ path: [], etaSec: 0, loading: false });
+      loggedTargetRef.current = null;
       return;
     }
 

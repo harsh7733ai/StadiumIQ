@@ -1,5 +1,7 @@
 import type { Order, PlaceOrderRequest } from "@/lib/schemas/order";
 import { OrderSchema, OrderListResponseSchema } from "@/lib/schemas/order";
+import { conversions } from "@/lib/google/gtag";
+import { trackEvent } from "@/lib/firebase/analytics";
 
 const IS_MOCK = process.env.NEXT_PUBLIC_MOCK_MODE === "true";
 
@@ -59,7 +61,21 @@ export async function placeOrder(
   }
 
   const data: unknown = await res.json();
-  return OrderSchema.parse(data);
+  const order = OrderSchema.parse(data);
+
+  // Conversion telemetry — GA4 for Looker Studio funnels + Firebase for
+  // Firebase console DebugView. See docs/GOOGLE_SERVICES.md.
+  conversions.orderPlaced(
+    order.totalCents,
+    order.items.reduce((n, item) => n + item.qty, 0),
+  );
+  void trackEvent("order_placed", {
+    poi_id: order.poiId,
+    total_cents: order.totalCents,
+    item_count: order.items.reduce((n, item) => n + item.qty, 0),
+  });
+
+  return order;
 }
 
 export async function advanceOrder(id: string): Promise<Order> {

@@ -4,6 +4,7 @@ import { ThemeProvider } from "next-themes";
 import { Toaster } from "@/components/ui/sonner";
 import { BRAND } from "@/lib/brand";
 import { GoogleAnalytics } from "@/components/shared/GoogleAnalytics";
+import { RecaptchaScript } from "@/components/shared/RecaptchaScript";
 import { SkipLink } from "@/components/shared/SkipLink";
 import "./globals.css";
 
@@ -83,6 +84,7 @@ export default function RootLayout({
           <Toaster position="top-center" richColors />
         </ThemeProvider>
         <GoogleAnalytics />
+        <RecaptchaScript />
       </body>
     </html>
   );

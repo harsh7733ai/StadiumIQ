@@ -27,6 +27,9 @@ const PublicEnvSchema = z.object({
   NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: z.string().optional(),
   NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: z.string().optional(),
   NEXT_PUBLIC_FIREBASE_APP_ID: z.string().optional(),
+  NEXT_PUBLIC_FIREBASE_VAPID_KEY: z.string().optional(),
+  NEXT_PUBLIC_RECAPTCHA_SITE_KEY: z.string().optional(),
+  NEXT_PUBLIC_GOOGLE_MAPS_KEY: z.string().optional(),
 });
 
 export type ServerEnv = z.infer<typeof ServerEnvSchema>;
@@ -56,6 +59,9 @@ function parsePublicEnv(): PublicEnv {
     NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
     NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
     NEXT_PUBLIC_FIREBASE_APP_ID: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+    NEXT_PUBLIC_FIREBASE_VAPID_KEY: process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY,
+    NEXT_PUBLIC_RECAPTCHA_SITE_KEY: process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY,
+    NEXT_PUBLIC_GOOGLE_MAPS_KEY: process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY,
   });
   if (!parsed.success) {
     throw new Error(
@@ -80,4 +86,18 @@ export const hasAnalytics: boolean = Boolean(publicEnv.NEXT_PUBLIC_GA_ID);
 export const hasFirebase: boolean = Boolean(
   publicEnv.NEXT_PUBLIC_FIREBASE_API_KEY &&
     publicEnv.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+);
+
+/** Whether Firebase Cloud Messaging (push) is configured with a VAPID key. */
+export const hasFcm: boolean =
+  hasFirebase && Boolean(publicEnv.NEXT_PUBLIC_FIREBASE_VAPID_KEY);
+
+/** Whether reCAPTCHA v3 is configured on the client. */
+export const hasRecaptcha: boolean = Boolean(
+  publicEnv.NEXT_PUBLIC_RECAPTCHA_SITE_KEY,
+);
+
+/** Whether a Google Maps Embed API key is configured. */
+export const hasGoogleMaps: boolean = Boolean(
+  publicEnv.NEXT_PUBLIC_GOOGLE_MAPS_KEY,
 );

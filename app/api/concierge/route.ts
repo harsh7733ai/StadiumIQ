@@ -8,6 +8,7 @@ import { structuredChat } from "@/lib/gemini/client";
 import { getGraph, shortestPath } from "@/lib/routing";
 import { USER_SEAT_NODE_ID, WALKING_SPEED_SVG_PER_SEC, ROUTING_ETA_ROUND_TO_SEC } from "@/lib/constants";
 import { rateLimit, clientKeyFrom } from "@/lib/security/rateLimit";
+import { verifyRecaptchaToken } from "@/lib/security/recaptcha";
 import { heuristicConciergeReply } from "@/lib/concierge/heuristic";
 import rawPois from "@/public/venue/pois.json";
 
@@ -25,6 +26,13 @@ const FALLBACK: ConciergeResponse = {
 
 const RATE_LIMITED: ConciergeResponse = {
   reply: "Whoa — you're asking faster than I can think. Give me a few seconds and try again.",
+  recommendation: null,
+  action: "info",
+};
+
+const CAPTCHA_FAILED: ConciergeResponse = {
+  reply:
+    "I couldn't verify this request. Refresh the page and try again — this keeps the demo safe from abuse.",
   recommendation: null,
   action: "info",
 };
@@ -57,7 +65,16 @@ export async function POST(request: Request) {
     return NextResponse.json(FALLBACK);
   }
 
-  const { messages, userLocation } = parsed.data;
+  const { messages, userLocation, recaptchaToken } = parsed.data;
+
+  // reCAPTCHA v3 score check. Fails open when `RECAPTCHA_SECRET_KEY` is
+  // unset (demo build) and fails closed when a token is present but
+  // invalid/low-score (real attack surface).
+  const captcha = await verifyRecaptchaToken(recaptchaToken, "concierge");
+  if (!captcha.ok) {
+    return NextResponse.json(CAPTCHA_FAILED, { status: 403 });
+  }
+
   const density = getDensitySnapshot();
   const graph = getGraph();
 
