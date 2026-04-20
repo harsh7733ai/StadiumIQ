@@ -62,6 +62,25 @@ export default defineConfig({
         "node_modules/**",
         "**/index.ts",
       ],
+      /**
+       * Enforce minimum coverage thresholds.
+       *
+       * These gates ensure the test suite stays meaningful over time.
+       * CI fails immediately if coverage drops below these levels, giving
+       * the team an early warning before regressions compound.
+       *
+       * Thresholds are calibrated for the current codebase:
+       * - Statements/Lines 85 % catches most untested code paths.
+       * - Branches 80 % is realistic given the many Firebase/demo-mode
+       *   guard clauses that are hard to exercise without live credentials.
+       * - Functions 90 % ensures no public API surface goes dark.
+       */
+      thresholds: {
+        statements: 85,
+        branches: 80,
+        functions: 90,
+        lines: 85,
+      },
     },
   },
   resolve: {

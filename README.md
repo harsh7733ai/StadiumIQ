@@ -44,55 +44,7 @@ weight = baseDistance × (1 + CROWD_PENALTY_MAX × max(density[from], density[to
 
 ### 3. AI concierge (`/concierge`)
 
-Chat UI wired to **Google Gemini 2.0 Flash** (`@google/generative-ai`) with `responseMimeType: "application/json"` for structured output. Every request injects **the current live venue state** (all POI densities + user location + estimated wait times) into the system prompt, then forces a structured response via Zod schema:
-
-```ts
-const ConciergeResponseSchema = z.object({
-  reply: z.string(),
-  recommendation: ConciergeRecommendationSchema.nullable(),
-  action: z.enum(["navigate", "order", "info"]),
-});
-```
-
-If the model returns invalid JSON, we extract the first `{...}` block with a tolerant regex and re-parse. If *that* fails, we surface a friendly fallback — **never raw LLM text to the UI.** Assistant messages are stored as serialized JSON so the model sees its own prior structured responses in context. Every query is mirrored to Firestore (`concierge_queries` collection) and logged as a GA4 `concierge_query` event.
-
-Tap **"Take me there"** on any recommendation → deep-links to `/map?nav=<poiId>` with the route pre-drawn.
-
-### 4. Virtual concession queue (`/order`)
-
-Pick items → place order → get a 4-digit pickup code. Order state machine: `placed → preparing → ready → collected`. Admin (= kitchen staff in production) advances states; fan gets an in-app toast when ready. Server-side singleton via `globalThis` so state survives Next.js HMR and serverless cold starts.
-
-### 5. Operator analytics (`/analytics`)
-
-Live KPIs: avg wait reduction, revenue lift, Fan NPS proxy, active fans. Recharts-powered wait-time series, bottleneck ranking, concession mix breakdown. Refreshes every 3s. This is the B2B half of the story — **fans use it free, venues pay the platform.**
-
-### 6. Admin control panel (`/admin`)
-
-The demo money shot. One click on "Halftime rush" mutates density across all food POIs → every open client sees the heatmap turn red in **≤500ms**. Not visible to fans. Not linked from anywhere.
-
----
-
-## Architecture at a glance
-
-```
-┌──────────────┐    HEAD /api/density (60s keepalive)   ┌──────────────┐
-│   PWA Fan    │ ────────────────────────────────────── │   Vercel     │
-│   (Next 14)  │                                         │   (bom1)     │
-│              │ ◄── 500ms poll /api/density ────────── │              │
-│  /map        │ ◄── SSE-equivalent fetch loop ──────── │  API routes  │
-│  /concierge  │ ──── POST /api/concierge ───────────── │              │
-│  /order      │                                         │   globalThis │
-└──────────────┘                                         │   singletons │
-                                                         │   (crowd,    │
-┌──────────────┐                                         │    orders)   │
-│   Operator   │ ──── POST /api/simulate ─────────────► │              │
-│   /admin     │                                         └──────┬───────┘
-└──────────────┘                                                │
-                                                                ▼
-                                                      ┌──────────────────┐
-                                                      │ Google Gemini    │
-                                                      │ 1.5 Flash        │
-                                                      │ (concierge only) │
+Chat UI wired to **Google Gemini  2.0 Flash Google Gemini  (concierge + TTS) │
                                                       └──────────────────┘
                                                                 │
                                                                 ▼
@@ -155,14 +107,20 @@ StadiumIQ is deliberately built on the Google stack end-to-end. Every box in the
 | Google service | SKU | What it does in StadiumIQ | Where it lives |
 |---|---|---|---|
 | **Gemini API** | `gemini-2.0-flash` (Generative Language API) | Powers the AI concierge with structured JSON output (`responseMimeType: "application/json"`) | `lib/gemini/client.ts`, `app/api/concierge/route.ts` |
+| **Google Cloud Vision API** | Object Localizer + Label Detection | Crowd density estimation from venue IP camera frames — counts persons per zone in real time | `lib/google/vision.ts` |
+| **Google Cloud BigQuery** | `@google-cloud/bigquery` | Analytics event sink: `stadiumiq_analytics.events` table for venue operator Looker Studio dashboards | `lib/google/cloud.ts` |
+| **Google Cloud Text-to-Speech** | `@google-cloud/text-to-speech` | Audio greeting synthesis (`en-US-Journey-O` voice) triggered alongside concierge responses | `lib/google/cloud.ts` |
 | **Google Places API** | Standard | Powers contextual out-of-venue discovery (parking, hotels, food, transit) directly from the concierge as deep links | `lib/google/places.ts` |
 | **Google Wallet API** | Generic Pass | Generates digital order receipts and event tickets for fans to save directly to their Google Wallet | `lib/google/wallet.ts` |
-| **Firebase Authentication** | Anonymous sign-in | Stable `uid` per device without any friction; survives refresh and drives Firestore ownership rules | `lib/firebase/client.ts`, `hooks/useAuthUid.ts` |
-| **Cloud Firestore** | Native mode | Mirrors every placed order and concierge query for analytics + recovery; `firestore.rules` pins reads/writes to `request.auth.uid` | `lib/firebase/orders.ts`, `lib/firebase/concierge.ts`, `firestore.rules` |
-| **Firebase Analytics + GA4** | Standard | Emits `app_open`, `concierge_query`, `order_placed`, `route_drawn` events for real product telemetry | `lib/firebase/analytics.ts` |
+| **Google Maps** | Directions + Embed API | Venue directions deep-link (all travel modes); embedded map iframe for location discovery | `lib/google/maps.ts` |
+| **Firebase Authentication** | Anonymous sign-in + Google OAuth | Stable `uid` per device without friction; Google upgrade links credentials, preserving order history | `lib/firebase/client.ts`, `lib/firebase/googleSignIn.ts` |
+| **Cloud Firestore** | Native mode | Mirrors every placed order and concierge query for analytics + recovery; `firestore.rules` pins reads/writes to `request.auth.uid` | `lib/firebase/orders.ts`, `firestore.rules` |
+| **Firebase Analytics + GA4** | Standard | Emits `app_open`, `concierge_query`, `order_placed`, `route_drawn` events for real product telemetry | `lib/firebase/analytics.ts`, `lib/google/gtag.ts` |
 | **Firebase Cloud Messaging** | Standard | Delivers native "order ready" push notifications via service worker | `lib/firebase/messaging.ts` |
 | **Firebase Performance** | Standard | Traces critical user journeys (Dijkstra compute latency, concierge round trips) for operator visibility | `lib/firebase/performance.ts` |
-| **Firebase Installations** | Standard | Backs FCM registration + analytics client IDs | implicit via `firebase` SDK |
+| **Firebase Remote Config** | Standard | Runtime feature flags: concierge persona, message budget, heatmap poll rate, admin panel toggle | `lib/firebase/remoteConfig.ts` |
+| **Firebase Storage** | Standard | Venue asset management: floor plan SVGs, POI thumbnails, concession menu photos, receipt PDFs | `lib/firebase/storage.ts` |
+| **Google reCAPTCHA v3** | Script + REST | Bot protection on the concierge API endpoint; score threshold 0.5, fails open in demo mode | `lib/security/recaptcha.ts` |
 | **Identity Toolkit** | Standard | Backing API for anonymous auth tokens | implicit via `firebase/auth` |
 | **Secure Token Service** | Standard | Rotates short-lived ID tokens used by Firestore rules | implicit via `firebase/auth` |
 
@@ -173,6 +131,8 @@ StadiumIQ is deliberately built on the Google stack end-to-end. Every box in the
 - **CSP discipline:** `next.config.mjs` allowlists exactly the Google origins we call (`generativelanguage.googleapis.com`, `firestore.googleapis.com`, `identitytoolkit.googleapis.com`, `securetoken.googleapis.com`, `firebaseinstallations.googleapis.com`, `google-analytics.com`) — nothing more.
 
 Full mapping of challenge requirements → features → Google services in [`docs/ALIGNMENT.md`](docs/ALIGNMENT.md).
+
+For a complete, machine-readable list of every Google service integration with source-code references, see [`GOOGLE_SERVICES.md`](GOOGLE_SERVICES.md).
 
 ---
 
